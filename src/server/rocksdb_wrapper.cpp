@@ -212,6 +212,7 @@ int rocksdb_wrapper::ingest_files(int64_t decree,
     rocksdb::IngestExternalFileOptions ifo;
     ifo.move_files = true;
     ifo.ingest_behind = ingest_behind;
+    ifo.write_global_seqno = false;
     rocksdb::Status s = _db->IngestExternalFile(sst_file_list, ifo);
     if (dsn_unlikely(!s.ok())) {
         LOG_ERROR_ROCKSDB("IngestExternalFile",
