@@ -95,6 +95,51 @@ public:
             ASSERT_EQ(before_count + test.expect_perf_counter_incr, after_count);
         }
     }
+
+    void test_open_db_with_rocksdb_envs(bool is_restart)
+    {
+        struct create_test
+        {
+            std::string env_key;
+            std::string env_value;
+            std::string expect_value;
+        } tests[] = {
+            {"rocksdb.num_levels", "5", "5"}, {"rocksdb.write_buffer_size", "33554432", "33554432"},
+        };
+        std::map<std::string, std::string> envs;
+        for (auto test : tests) {
+            envs[test.env_key] = test.env_value;
+        }
+
+        {
+            // Make sure all options of ROCKSDB_DYNAMIC_OPTIONS and ROCKSDB_STATIC_OPTIONS are
+            // tested
+            for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
+                ASSERT_TRUE(envs.find(option) != envs.end());
+            }
+            for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
+                ASSERT_TRUE(envs.find(option) != envs.end());
+            }
+        }
+
+        start(envs);
+        if (is_restart) {
+            _server->stop(false);
+            start();
+        }
+
+        std::map<std::string, std::string> query_envs;
+        _server->query_app_envs(query_envs);
+        for (auto test : tests) {
+            auto iter = query_envs.find(test.env_key);
+            if (iter != query_envs.end()) {
+                ASSERT_EQ(iter->second, test.expect_value);
+            } else {
+                ASSERT_EQ(test.env_key,
+                          fmt::format("query_app_envs not supported {}", test.env_key));
+            }
+        }
+    }
 };
 
 TEST_F(pegasus_server_impl_test, test_table_level_slow_query)
@@ -135,6 +180,16 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
     envs[ROCKSDB_ENV_USAGE_SCENARIO_KEY] = ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD;
     start(envs);
     ASSERT_EQ(ROCKSDB_ENV_USAGE_SCENARIO_BULK_LOAD, _server->_usage_scenario);
+}
+
+TEST_F(pegasus_server_impl_test, test_open_db_with_rocksdb_envs)
+{
+    test_open_db_with_rocksdb_envs(false);
+}
+
+TEST_F(pegasus_server_impl_test, test_restart_db_with_rocksdb_envs)
+{
+    test_open_db_with_rocksdb_envs(true);
 }
 
 TEST_F(pegasus_server_impl_test, test_stop_db_twice)
