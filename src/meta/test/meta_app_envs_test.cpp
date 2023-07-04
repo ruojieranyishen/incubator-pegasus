@@ -203,6 +203,18 @@ TEST_F(meta_app_envs_test, update_app_envs_test)
             ASSERT_EQ(app->envs.at(test.env_key), test.expect_value);
         }
     }
+
+    {
+        // Make sure all rocksdb options of ROCKSDB_DYNAMIC_OPTIONS are tested.
+        // Hint: Mainly verify the update_rocksdb_dynamic_options function.
+        std::map<std::string, std::string> all_test_envs;
+        for (auto test : tests) {
+            all_test_envs[test.env_key] = test.env_value;
+        }
+        for (const auto &option : replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
+            ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
+        }
+    }
 }
 
 } // namespace replication

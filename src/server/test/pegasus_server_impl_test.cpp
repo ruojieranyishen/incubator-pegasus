@@ -106,23 +106,23 @@ public:
         } tests[] = {
             {"rocksdb.num_levels", "5", "5"}, {"rocksdb.write_buffer_size", "33554432", "33554432"},
         };
-        std::map<std::string, std::string> envs;
-        for (auto test : tests) {
-            envs[test.env_key] = test.env_value;
-        }
 
+        std::map<std::string, std::string> all_test_envs;
         {
-            // Make sure all options of ROCKSDB_DYNAMIC_OPTIONS and ROCKSDB_STATIC_OPTIONS are
-            // tested
+            // Make sure all rocksdb options of ROCKSDB_DYNAMIC_OPTIONS and ROCKSDB_STATIC_OPTIONS are
+            // tested.
+            for (auto test : tests) {
+                all_test_envs[test.env_key] = test.env_value;
+            }
             for (const auto &option : pegasus::ROCKSDB_DYNAMIC_OPTIONS) {
-                ASSERT_TRUE(envs.find(option) != envs.end());
+                ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
             }
             for (const auto &option : pegasus::ROCKSDB_STATIC_OPTIONS) {
-                ASSERT_TRUE(envs.find(option) != envs.end());
+                ASSERT_TRUE(all_test_envs.find(option) != all_test_envs.end());
             }
         }
 
-        start(envs);
+        start(all_test_envs);
         if (is_restart) {
             _server->stop(false);
             start();
@@ -184,11 +184,13 @@ TEST_F(pegasus_server_impl_test, test_open_db_with_app_envs)
 
 TEST_F(pegasus_server_impl_test, test_open_db_with_rocksdb_envs)
 {
+    // Hint: Verify the set_rocksdb_options_before_creating function by boolean is_restart=false.
     test_open_db_with_rocksdb_envs(false);
 }
 
 TEST_F(pegasus_server_impl_test, test_restart_db_with_rocksdb_envs)
 {
+    // Hint: Verify the reset_rocksdb_options function by boolean is_restart=true.
     test_open_db_with_rocksdb_envs(true);
 }
 

@@ -2641,7 +2641,7 @@ void pegasus_server_impl::update_rocksdb_dynamic_options(
         }
 
         std::vector<std::string> args;
-        // Example: Parse write_buffer_size from rocksdb.write_buffer_size
+        // split_args example: Parse write_buffer_size from rocksdb.write_buffer_size
         dsn::utils::split_args(option.c_str(), args, '.');
         new_options[args[1]] = find->second;
     }
@@ -2667,7 +2667,7 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
 
         auto setter = cf_opts_setters.find(option);
         if (setter == cf_opts_setters.end()) {
-            LOG_WARNING("cannot find {} setter function", option);
+            LOG_WARNING("cannot find {} setter function, and set this option fail.", option);
             continue;
         }
         if (setter->second(find->second, _data_cf_opts)) {
@@ -2683,7 +2683,7 @@ void pegasus_server_impl::set_rocksdb_options_before_creating(
 
         auto setter = cf_opts_setters.find(option);
         if (setter == cf_opts_setters.end()) {
-            LOG_WARNING("cannot find {} setter function", option);
+            LOG_WARNING("cannot find {} setter function, and set this option fail.", option);
             continue;
         }
         if (setter->second(find->second, _data_cf_opts)) {
