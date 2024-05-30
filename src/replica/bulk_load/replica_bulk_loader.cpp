@@ -535,10 +535,10 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
 {
     if (_status != bulk_load_status::BLS_DOWNLOADING) {
         LOG_WARNING_PREFIX("Cancel download_sst_file task, because bulk_load local_status is {}. "
-                       "local_dir: {} , file_index is {}",
-                       enum_to_string(_status),
-                       local_dir,
-                       file_index);
+                           "local_dir: {} , file_index is {}",
+                           enum_to_string(_status),
+                           local_dir,
+                           file_index);
         return;
     }
     file_meta f_meta;
@@ -553,8 +553,8 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
     }
     if (!get_f_meta) {
         LOG_WARNING_PREFIX("sst file index {} exceeds number of bulkload sst files, Cancel "
-                       "download_sst_file task.",
-                       file_index);
+                           "download_sst_file task.",
+                           file_index);
         return;
     }
     uint64_t f_size = 0;
