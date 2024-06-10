@@ -535,7 +535,7 @@ void replica_bulk_loader::download_sst_file(const std::string &remote_dir,
 {
     if (_status != bulk_load_status::BLS_DOWNLOADING) {
         LOG_WARNING_PREFIX("Cancel download_sst_file task, because bulk_load local_status is {}. "
-                           "local_dir: {} , file_index is {}",
+                           "local_dir: {} , file_index is {}.",
                            enum_to_string(_status),
                            local_dir,
                            file_index);
