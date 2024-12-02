@@ -84,6 +84,10 @@ func (n *PegasusNode) RPCAddress() *base.RPCAddress {
 	return base.NewRPCAddress(n.IP, n.Port)
 }
 
+func (n *PegasusNode) Close() error {
+	return n.session.Close()
+}
+
 // NewNodeFromTCPAddr creates a node from tcp address.
 // NOTE:
 //   - Will not initialize TCP connection unless needed.
@@ -210,4 +214,15 @@ func (m *PegasusNodeManager) GetPerfSession(addr string, ntype session.NodeType)
 	}
 
 	return aggregate.WrapPerf(addr, node.session)
+}
+
+func (m *PegasusNodeManager) CloseAllNodes() error {
+	var errorStrings []string
+	for _, n := range m.nodes {
+		err := n.Close()
+		if err != nil {
+			errorStrings = append(errorStrings, err.Error())
+		}
+	}
+	return fmt.Errorf("%s", strings.Join(errorStrings, "\n"))
 }
