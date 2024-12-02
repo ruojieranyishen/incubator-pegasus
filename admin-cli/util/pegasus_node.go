@@ -228,5 +228,8 @@ func (m *PegasusNodeManager) CloseAllNodes() error {
 			errorStrings = append(errorStrings, err.Error())
 		}
 	}
-	return fmt.Errorf("%s", strings.Join(errorStrings, "\n"))
+	if len(errorStrings) != 0 {
+		return fmt.Errorf("%s", strings.Join(errorStrings, "\n"))
+	}
+	return nil
 }
