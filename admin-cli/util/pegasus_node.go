@@ -85,7 +85,11 @@ func (n *PegasusNode) RPCAddress() *base.RPCAddress {
 }
 
 func (n *PegasusNode) Close() error {
-	return n.session.Close()
+	if n.session != nil {
+		return n.session.Close()
+	} else {
+		return nil
+	}
 }
 
 // NewNodeFromTCPAddr creates a node from tcp address.
