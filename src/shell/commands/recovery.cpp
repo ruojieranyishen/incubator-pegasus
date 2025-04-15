@@ -399,3 +399,202 @@ bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args)
     std::cout << "Diagnose ddd done." << std::endl;
     return true;
 }
+
+
+bool ddd_reset(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"gpid", required_argument, 0, 'g'},
+                                           {"reset", no_argument, 0, 'r'},
+                                           {"file_name", required_argument, 0, 'o'},
+                                           {0, 0, 0, 0}};
+
+    dsn::gpid id(-1, -1);
+    std::string file_name = "pegasus_reset_log." + std::to_string(dsn_now_ms());
+    bool reset = false;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "g:ro:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'g':
+            if (id.parse_from(optarg)) {
+                // app_id.partition_index
+            } else {
+                fprintf(stderr, "ERROR: invalid gpid %s\n", optarg);
+                return false;
+            }
+            break;
+        case 'r':
+            reset = true;
+            break;
+        case 'o':
+            file_name = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    dsn::partition_configuration pc;
+    ::dsn::error_code ret = sc->ddl_client->ddd_reset(id, false,pc);
+    if (ret != dsn::ERR_OK) {
+        fprintf(stderr, "ERROR: DDD reset failed with err = %s\n", ret.to_string());
+        return true;
+    }
+
+    std::streambuf *buf;
+    std::ofstream of;
+
+    of.open(file_name);
+    buf = of.rdbuf();
+    std::ostream out(buf);
+
+    if (!pc.primary.is_invalid()){
+        out<<"gpid "<<id << " have primary replica! cannot reset!" <<std::endl;
+        std::cout<<"gpid "<<id << " have primary replica! cannot reset!" <<std::endl;
+        return  true;
+    }
+    if (!pc.secondaries.empty()){
+        std::map<dsn::rpc_address, dsn::error_with<dsn::replication::reset_ddd_partition_response >> resps;
+        sc->ddl_client->ddd_reserve_replica(pc,pc.secondaries,resps,true);
+        for(const auto& iter : resps){
+            if(iter.second.is_ok()){
+                out<<"gpid "<<id << " have alive secondary in node "<< iter.first.to_std_string() <<" ! cannot reset!" <<std::endl;
+                std::cout<<"gpid "<<id << " have alive secondary in node "<< iter.first.to_std_string() <<" ! cannot reset!" <<std::endl;
+                return  true;
+            }
+        }
+    }
+    if (pc.ballot<=3){
+        out << "ballot is "<< pc.ballot <<", cannot reset again." << std::endl;
+        std::cout << "ballot is "<< pc.ballot <<", cannot reset again." << std::endl;
+        return true;
+    }
+
+    std::ostringstream oss;
+    std::set<dsn::rpc_address> reserve_node;
+    reserve_node.insert(pc.secondaries.begin(),pc.secondaries.end());
+    reserve_node.insert(pc.last_drops.begin(),pc.last_drops.end());
+    for(const auto& address: reserve_node) oss << address.to_std_string() << ",";
+    auto reserve_nodes_str = oss.str();
+    reserve_nodes_str.pop_back();
+    out<< "Hint: Suggest reserve use: ddd_reserve -g "<<id.to_string()<<" -b -l " << reserve_nodes_str << std::endl;
+    std::cout<< "Hint: Suggest reserve use: ddd_reserve -g "<<id.to_string()<<" -b -l " << reserve_nodes_str << std::endl;
+
+    if(reset ==true){
+        std::string user_input;
+        std::cout << "Do you want to reset? (yes/no): ";
+        std::cin >> user_input;
+        if (user_input == "yes") {
+          out << "Start reset ..." << std::endl;
+          std::cout << "Start reset ..." << std::endl;
+          dsn::partition_configuration temp_cfg;
+          ret = sc->ddl_client->ddd_reset(id,true,temp_cfg);
+          if (ret != dsn::ERR_OK) {
+              fprintf(stderr, "ERROR: DDD reset failed with err = %s\n", ret.to_string());
+              return true;
+          }
+          out << "End reset." << std::endl;
+          std::cout << "End reset." << std::endl;
+        } else {
+          out << "Reset operation cancelled." << std::endl;
+          std::cout << "Reset operation cancelled." << std::endl;
+        }
+    }
+
+    return true;
+}
+
+bool ddd_reserve(command_executor *e, shell_context *sc, arguments args)
+{
+    static struct option long_options[] = {{"gpid", required_argument, 0, 'g'},
+                                           {"reserve", no_argument, 0, 'b'},
+                                           {"node_list", required_argument, 0, 'l'},
+                                           {0, 0, 0, 0}};
+
+    dsn::gpid id(-1, -1);
+    std::string nodes  = "";
+    bool reserve = false;
+
+    optind = 0;
+    while (true) {
+        int option_index = 0;
+        int c;
+        c = getopt_long(args.argc, args.argv, "g:bl:", long_options, &option_index);
+        if (c == -1)
+            break;
+        switch (c) {
+        case 'g':
+            if (id.parse_from(optarg)) {
+                // app_id.partition_index
+            } else {
+                fprintf(stderr, "ERROR: invalid gpid %s\n", optarg);
+                return false;
+            }
+            break;
+        case 'b':
+            reserve = true;
+            break;
+        case 'l':
+            nodes = optarg;
+            break;
+        default:
+            return false;
+        }
+    }
+
+    if(nodes.empty()){
+        fprintf(stderr, "ERROR: nodes is empty.");
+        return false;
+    }
+
+    std::set<dsn::rpc_address> reserve_node;
+    std::vector<std::string> tokens;
+    dsn::utils::split_args(nodes.c_str(), tokens, ',');
+    if(!tokens.empty()){
+        for (std::string &token : tokens) {
+            dsn::rpc_address node;
+            if (!node.from_string_ipv4(token.c_str())) {
+                fprintf(stderr, "parse %s as a ip:port node failed\n", token.c_str());
+                return false;
+            }
+            reserve_node.insert(node);
+        }
+    }
+
+
+    dsn::partition_configuration pc;
+    ::dsn::error_code ret = sc->ddl_client->ddd_reset(id, false,pc);
+    if (ret != dsn::ERR_OK) {
+        fprintf(stderr, "ERROR: DDD reset failed with err = %s\n", ret.to_string());
+        return true;
+    }
+
+    std::streambuf *buf;
+    std::ofstream of;
+    buf = std::cout.rdbuf();
+    std::ostream out(buf);
+
+    std::ostringstream oss;
+    for(const auto& address: reserve_node) oss << address.to_std_string() << ",";
+    auto reserve_nodes_str = oss.str();
+    reserve_nodes_str.pop_back();
+    out<< "Hint: Try reserve gpid("<<id.to_string()<<") replicas in " << reserve_nodes_str << std::endl;
+
+    if(reserve== true){
+        out << "Start reserve ..." << std::endl;
+        std::map<dsn::rpc_address, dsn::error_with<dsn::replication::reset_ddd_partition_response >> resps;
+        std::vector<dsn::rpc_address> temp_vec(reserve_node.begin(),reserve_node.end());
+        sc->ddl_client->ddd_reserve_replica(pc,temp_vec,resps);
+        for(const auto& iter : resps){
+            out << "Gpid: " << id <<" Target: " << iter.first.to_std_string() << " ERR: "<<iter.second.get_error();
+            out << " Hint: " << (iter.second.is_ok()?iter.second.get_value().hint_message : "")<<std::endl;
+        }
+        out << "End reserve." << std::endl;
+    }
+    return true;
+}

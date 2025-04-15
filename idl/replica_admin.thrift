@@ -44,6 +44,18 @@ struct query_replica_decree_response
     2:i64                 last_decree;
 }
 
+struct reset_ddd_partition_request
+{
+    1:metadata.replica_configuration  config;
+    2:optional bool disable_reserve = false;
+}
+
+struct reset_ddd_partition_response
+{
+    1:dsn.error_code      err;
+    2:string hint_message;
+}
+
 struct query_replica_info_request
 {
     1:dsn.rpc_address        node1;

@@ -522,6 +522,8 @@ void meta_service::register_rpc_handlers()
         RPC_CM_UPDATE_APP_ENV, "update_app_env(set/del/clear)", &meta_service::update_app_env);
     register_rpc_handler_with_rpc_holder(
         RPC_CM_DDD_DIAGNOSE, "ddd_diagnose", &meta_service::ddd_diagnose);
+    register_rpc_handler_with_rpc_holder(
+        RPC_CM_DDD_RESET_PARTITION, "ddd_reset", &meta_service::ddd_reset);
     register_rpc_handler_with_rpc_holder(RPC_CM_START_PARTITION_SPLIT,
                                          "start_partition_split",
                                          &meta_service::on_start_partition_split);
@@ -1126,6 +1128,22 @@ void meta_service::ddd_diagnose(ddd_diagnose_rpc rpc)
     CHECK_APP_ID_STATUS_AND_AUTHZ(rpc.request().pid.get_app_id());
     auto &response = rpc.response();
     get_partition_guardian()->get_ddd_partitions(rpc.request().pid, response.partitions);
+    response.err = ERR_OK;
+}
+
+void meta_service::ddd_reset(ddd_reset_rpc rpc)
+{
+    if (!check_status(rpc)) {
+        return;
+    }
+    auto &response = rpc.response();
+    ddebug("receive ddd reset partition request, gpid(%s).",rpc.request().pid.to_string());
+
+    _state->query_configuration_by_gpid(rpc.request().pid, response.config);
+
+    if (rpc.request().force){
+        _state->on_reset_partition(rpc);
+    }
     response.err = ERR_OK;
 }
 

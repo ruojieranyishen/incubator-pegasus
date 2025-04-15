@@ -384,6 +384,20 @@ struct configuration_balancer_response
     1:dsn.error_code err;
 }
 
+struct ddd_reset_request
+{
+    // app_id == -1 || partition_id == -1 means not reset any partition
+    // app_id != -1 && partition_id != -1 means reset specified partition
+    1:dsn.gpid pid;
+    2:optional bool force = false;
+}
+
+struct ddd_reset_response
+{
+    1:dsn.error_code           err;
+    2:dsn.layer2.partition_configuration  config;
+}
+
 struct ddd_diagnose_request
 {
     // app_id == -1 means return all partitions of all apps

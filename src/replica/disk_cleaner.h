@@ -41,6 +41,7 @@ extern const std::string kFolderSuffixGar; // replica closed and assign garbage 
 extern const std::string kFolderSuffixBak; // replica backup dir which can be restored
 extern const std::string kFolderSuffixOri; // replica disk migration origin dir
 extern const std::string kFolderSuffixTmp; // replica disk migration temp dir
+extern const std::string kFolderSuffixRet; // replica reset dir
 
 struct disk_cleaning_report
 {
@@ -50,6 +51,7 @@ struct disk_cleaning_report
     int error_replica_count{0};
     int disk_migrate_tmp_count{0};
     int disk_migrate_origin_count{0};
+    int disk_reset_replica_count{0};
 };
 
 // Removes the useless data from data directories.

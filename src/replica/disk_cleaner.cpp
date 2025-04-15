@@ -66,6 +66,13 @@ DSN_DEFINE_uint64(replication,
                   "directory with '.ori' suffixed");
 DSN_TAG_VARIABLE(gc_disk_migration_origin_replica_interval_seconds, FT_MUTABLE);
 
+DSN_DEFINE_uint64("replication",
+    gc_disk_reset_replica_interval_seconds,
+    60 * 24 * 3600 /*60day*/,
+    "Duration of reset replica being removed, which is in a "
+    "directory with '.res' suffixed");
+DSN_TAG_VARIABLE(gc_disk_reset_replica_interval_seconds, FT_MUTABLE);
+
 namespace dsn {
 namespace replication {
 const std::string kFolderSuffixErr = ".err";
@@ -73,6 +80,7 @@ const std::string kFolderSuffixGar = ".gar";
 const std::string kFolderSuffixBak = ".bak";
 const std::string kFolderSuffixOri = ".ori";
 const std::string kFolderSuffixTmp = ".tmp";
+const std::string kFolderSuffixRet = ".res";
 
 namespace {
 
@@ -233,7 +241,11 @@ error_s disk_remove_useless_dirs(const std::vector<std::shared_ptr<dir_node>> &d
                     expiration_timestamp_s)) {
                 continue;
             }
-        } else {
+        } else if (boost::algorithm::ends_with(name, kFolderSuffixRet)) {
+            report.disk_reset_replica_count++;
+            remove_interval_seconds = FLAGS_gc_disk_reset_replica_interval_seconds;
+        }
+        else {
             continue;
         }
 
@@ -264,7 +276,8 @@ bool is_data_dir_removable(const std::string &dir)
     return boost::algorithm::ends_with(dir, kFolderSuffixErr) ||
            boost::algorithm::ends_with(dir, kFolderSuffixGar) ||
            boost::algorithm::ends_with(dir, kFolderSuffixTmp) ||
-           boost::algorithm::ends_with(dir, kFolderSuffixOri);
+           boost::algorithm::ends_with(dir, kFolderSuffixOri) ||
+           boost::algorithm::ends_with(dir, kFolderSuffixRet);
 }
 
 bool is_data_dir_invalid(const std::string &dir)

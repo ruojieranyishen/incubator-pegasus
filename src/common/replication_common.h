@@ -53,6 +53,7 @@ typedef rpc_holder<configuration_update_app_env_request, configuration_update_ap
     update_app_env_rpc;
 typedef rpc_holder<query_app_info_request, query_app_info_response> query_app_info_rpc;
 typedef rpc_holder<query_replica_info_request, query_replica_info_response> query_replica_info_rpc;
+typedef rpc_holder<reset_ddd_partition_request,reset_ddd_partition_response> reset_ddd_partition_rpc;
 
 class replication_options
 {

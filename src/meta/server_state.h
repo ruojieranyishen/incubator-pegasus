@@ -180,6 +180,7 @@ public:
     void on_config_sync(configuration_query_by_node_rpc rpc);
     void on_update_configuration(std::shared_ptr<configuration_update_request> &request,
                                  dsn::message_ex *msg);
+    void on_reset_partition(ddd_reset_rpc rpc);
 
     // dump & restore
     error_code dump_from_remote_storage(const char *local_path, bool sync_immediately);
@@ -302,6 +303,8 @@ private:
     void request_check(const partition_configuration &old_pc,
                        const configuration_update_request &request);
     void recall_partition(std::shared_ptr<app_state> &app, int pidx);
+    void reset_partition(std::shared_ptr<app_state> &app, int pidx);
+
     void drop_partition(std::shared_ptr<app_state> &app, int pidx);
     void downgrade_primary_to_inactive(std::shared_ptr<app_state> &app, int pidx);
     void downgrade_secondary_to_inactive(std::shared_ptr<app_state> &app,

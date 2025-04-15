@@ -2011,6 +2011,94 @@ void server_state::on_update_configuration_on_remote_reply(
     }
 }
 
+
+void server_state::on_reset_partition(ddd_reset_rpc rpc){
+
+    auto &response = rpc.response();
+    const dsn::gpid& pid = rpc.request().pid;
+
+    std::shared_ptr<app_state> app = get_app(pid.get_app_id());
+    if (app == nullptr || app->status != dsn::app_status::AS_AVAILABLE){
+        response.err = app == nullptr? ERR_APP_NOT_EXIST : ERR_APP_DROPPED;
+        auto hint_msg = fmt::format(
+            "app {} is ", response.err == ERR_APP_NOT_EXIST ? "not existed" : "not available");
+        derror_f("{}", hint_msg);
+        return ;
+    }
+
+    partition_configuration &pc = app->partitions[pid.get_partition_index()];
+    std::ostringstream  mem_oss;
+    mem_oss << pc;
+    ddebug("reset partition %s",mem_oss.str().c_str());
+
+    if (!pc.primary.is_invalid()){
+        ddebug("cannot reset partition, because cur partition primary not invalid");
+        response.err = dsn::ERR_NOT_IMPLEMENTED;
+        return ;
+    }
+
+    reset_partition(app,pid.get_partition_index());
+    response.err= dsn::ERR_OK;
+}
+
+void server_state::reset_partition(std::shared_ptr<app_state> &app, int pidx){
+    partition_configuration &pc = app->partitions[pidx];
+    std::string partition_path = get_partition_path(pc.pid);
+
+    auto do_reset_partition = [this, app,expected_pidx = pidx ,partition_path](error_code ec, const blob &value) {
+            if (ec == dsn::ERR_OK){
+                partition_configuration partition_config;
+                dsn::json::json_forwarder<partition_configuration>::decode(value,
+                                                                           partition_config);
+                if (partition_config.pid.get_partition_index() != expected_pidx){
+                    dassert(false,"get will reset partition_config not equal expected_pidx");
+                }
+                std::ostringstream  oss;
+                oss << partition_config;
+                ddebug("get will reset partition, partition_config=%s",oss.str().c_str());
+
+                partition_configuration new_partition_config = partition_config;
+                new_partition_config.primary.set_invalid();
+                new_partition_config.secondaries.clear();
+                new_partition_config.ballot=0;
+                new_partition_config.last_drops.clear();
+                new_partition_config.last_committed_decree = 0;
+                new_partition_config.partition_flags=0;
+
+                auto json_config =
+                    dsn::json::json_forwarder<partition_configuration>::encode(new_partition_config);
+
+                _meta_svc->get_remote_storage()->set_data(partition_path,
+                    json_config,
+                    LPC_META_STATE_HIGH,
+                    [this,new_partition_config,expected_pidx,app](dsn::error_code err) {
+                        if (dsn::ERR_OK == err) {
+                            std::ostringstream reset_oss;
+                            reset_oss << new_partition_config;
+                            app->partitions[expected_pidx] = new_partition_config;
+                            ddebug("reset partition success, gpid(%s), partition_config=%s ", new_partition_config.pid.to_string(),reset_oss.str().c_str());
+                        } else {
+                            derror("cannot reset partition gpid(%s) partition_configuration in remote storage failed, err reason(%s)",
+                                   new_partition_config.pid.to_string(),
+                                   err.to_string());
+                        } },
+                    &_tracker);
+            }else if (ec == dsn::ERR_TIMEOUT){
+                tasking::enqueue(LPC_META_STATE_HIGH,
+                                 &_tracker,
+                                 std::bind(&server_state::reset_partition, this, app,expected_pidx),
+                                 server_state::sStateHash,
+                                 std::chrono::milliseconds (100));
+            }
+        };
+    _meta_svc->get_remote_storage()->get_data(
+        partition_path,
+        LPC_META_CALLBACK,
+        do_reset_partition,
+        nullptr
+        );
+}
+
 void server_state::recall_partition(std::shared_ptr<app_state> &app, int pidx)
 {
     auto on_recall_partition = [this, app, pidx](dsn::error_code error) mutable {

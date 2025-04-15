@@ -31,6 +31,7 @@ namespace dsn::replication {
 using app_env_rpc =
     rpc_holder<configuration_update_app_env_request, configuration_update_app_env_response>;
 using ddd_diagnose_rpc = rpc_holder<ddd_diagnose_request, ddd_diagnose_response>;
+using ddd_reset_rpc = rpc_holder<ddd_reset_request, ddd_reset_response>;
 using configuration_query_by_node_rpc =
     rpc_holder<configuration_query_by_node_request, configuration_query_by_node_response>;
 using configuration_query_by_index_rpc = rpc_holder<query_cfg_request, query_cfg_response>;

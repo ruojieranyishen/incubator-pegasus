@@ -241,7 +241,9 @@ public:
     clear_app_envs(const std::string &app_name, bool clear_all, const std::string &prefix);
 
     dsn::error_code ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &ddd_partitions);
-
+    dsn::error_code ddd_reset(const gpid& pid , bool reset, /*out*/ dsn::partition_configuration & config);
+    void ddd_reserve_replica(const partition_configuration &pc, const std::vector<dsn::rpc_address> &targets ,
+                                        /*out*/ std::map<dsn::rpc_address, error_with<reset_ddd_partition_response>> &resps,bool disable_reserve = false);
     void
     query_disk_info(const std::vector<dsn::host_port> &targets,
                     const std::string &app_name,

@@ -1493,6 +1493,41 @@ replication_ddl_client::ddd_diagnose(gpid pid, std::vector<ddd_partition_info> &
     return dsn::ERR_OK;
 }
 
+void replication_ddl_client::ddd_reserve_replica(const partition_configuration &pc, const std::vector<dsn::rpc_address> &targets ,
+    /*out*/ std::map<dsn::rpc_address, error_with<reset_ddd_partition_response>> &resps, bool disable_reserve){
+std::map<dsn::rpc_address, reset_ddd_partition_rpc> reset_ddd_partition_rpcs;
+for (const auto &target : targets) {
+replica_configuration rconfig;
+replica_helper::get_replica_config(pc, target, rconfig);
+auto request = make_unique<reset_ddd_partition_request>();
+request->config = rconfig;
+request->disable_reserve = disable_reserve;
+reset_ddd_partition_rpcs.emplace(target,
+reset_ddd_partition_rpc(std::move(request), RPC_DDD_RESET_PARTITION));
+}
+call_rpcs_sync(reset_ddd_partition_rpcs, resps);
+}
+
+dsn::error_code
+replication_ddl_client::ddd_reset(const gpid& pid, bool force, /*out*/ dsn::partition_configuration& config)
+{
+std::shared_ptr<dsn::replication::ddd_reset_request> req(new dsn::replication::ddd_reset_request());
+req->pid = pid;
+req->force = force;
+auto resp_task = request_meta<dsn::replication::ddd_reset_request>(RPC_CM_DDD_RESET_PARTITION, req);
+resp_task->wait();
+if (resp_task->error() != dsn::ERR_OK) {
+return resp_task->error();
+}
+dsn::replication::ddd_reset_response resp;
+dsn::unmarshall(resp_task->get_response(), resp);
+if (resp.err != dsn::ERR_OK) {
+return resp.err;
+}
+config = resp.config;
+return dsn::ERR_OK;
+}
+
 void replication_ddl_client::query_disk_info(
     const std::vector<dsn::host_port> &targets,
     const std::string &app_name,

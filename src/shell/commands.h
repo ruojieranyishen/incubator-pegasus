@@ -221,6 +221,10 @@ bool recover(command_executor *e, shell_context *sc, arguments args);
 
 bool ddd_diagnose(command_executor *e, shell_context *sc, arguments args);
 
+bool ddd_reset(command_executor *e, shell_context *sc, arguments args);
+
+bool ddd_reserve(command_executor *e, shell_context *sc, arguments args);
+
 // == cold backup (see 'commands/cold_backup.cpp') == //
 
 bool add_backup_policy(command_executor *e, shell_context *sc, arguments args);

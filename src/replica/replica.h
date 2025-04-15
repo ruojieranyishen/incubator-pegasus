@@ -725,6 +725,7 @@ private:
     friend class open_replica_test;
     friend class mock_load_replica;
     friend class replica_follower;
+    friend class replica_reset_test;
     friend class ::pegasus::server::pegasus_server_test_base;
     friend class ::pegasus::server::rocksdb_wrapper_test;
     FRIEND_TEST(replica_disk_test, disk_io_error_test);

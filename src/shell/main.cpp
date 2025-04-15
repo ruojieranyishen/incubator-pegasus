@@ -535,6 +535,18 @@ static command_executor commands[] = {
         "[-s|--skip_prompt] [-o|--output file_name]",
         ddd_diagnose,
     },
+    {
+        "ddd_reset",
+        "reset abnormal partitions",
+        "[-g|--gpid appid.pidx] [-r|--reset] [-o|--output file_name]",
+        ddd_reset,
+    },
+    {
+        "ddd_reserve",
+        "reserve abnormal partitions",
+        "[-g|--gpid appid.pidx] [-b|--reserve] [-l ip:port,ip:port...]",
+        ddd_reserve,
+    },
     {"add_dup",
      "add duplication",
      "<app_name> <remote_cluster_name> [-s|--sst] [-a|--remote_app_name str] "

@@ -1218,6 +1218,90 @@ void replica_stub::on_query_last_checkpoint(query_last_checkpoint_info_rpc rpc)
     }
 }
 
+
+void replica_stub::on_reset_ddd_replica(dsn::replication::reset_ddd_partition_rpc rpc) {
+    const reset_ddd_partition_request & request = rpc.request();
+    reset_ddd_partition_response & response = rpc.response();
+
+    if(request.disable_reserve){
+        response.err = ERR_OK;
+        response.hint_message = fmt::format("connect replica success");
+        return ;
+    }
+
+    replica_ptr rep = get_replica(request.config.pid);
+    if(rep!=nullptr && (rep->status()!= partition_status::PS_INVALID &&
+                              rep->status() != partition_status::PS_INACTIVE &&
+                              rep->status() != partition_status::PS_ERROR)){
+        ddebug_f("[{}@{}]: received reset partition request, ballot = {}",
+                 request.config.pid,
+                 _primary_address_str,
+                 request.config.ballot);
+        response.err = ERR_OPERATION_DISABLED;
+        response.hint_message = fmt::format("Cannot reset partition, because cur state={}", enum_to_string(rep->status()));
+        return ;
+    }
+
+    ddebug_f("[{}@{}]: received reset partition request",
+             request.config.pid,
+             _primary_address_str);
+
+    std::vector<std::string> replica_dirs;
+    std::string pid_str = fmt::format("{}.",request.config.pid);
+    for (auto &dir : _fs_manager.get_available_data_dirs()) {
+        std::vector<std::string> tmp_list;
+        if (!dsn::utils::filesystem::get_subdirectories(dir, tmp_list, false)) {
+            dassert(false, "Fail to get subdirectories in %s.", dir.c_str());
+        }
+        for(auto str: tmp_list){
+            if(str.find(pid_str)!=std::string::npos){
+                ddebug_f("find_replica {} reset partition",str);
+                replica_dirs.emplace_back(str);
+            }
+        }
+    }
+
+    if (replica_dirs.empty()){
+        response.err = ERR_OBJECT_NOT_FOUND;
+        response.hint_message = fmt::format("Cannot reset partition, because not find gpid({}) dir", request.config.pid);
+        return ;
+    }
+
+    auto rename_func = [](std::vector<std::string> &replica_dirs,std::string &pid_str){
+        for(int i=0;i<replica_dirs.size();++i){
+            std::string replica_name = utils::filesystem::get_file_name(replica_dirs[i]);
+            std::string replica_dir = utils::filesystem::remove_file_name(replica_dirs[i]);
+            if (replica_dirs[i].find(kFolderSuffixRet) != std::string::npos){
+                continue;
+            }
+            // reset target_replica_dir: /replica_path/gpid.app_type.{err\bak}.{num}.res
+            auto target_replica_dir = fmt::format("{}/{}.{}{}", replica_dir,replica_name,i, kFolderSuffixRet);
+            if (utils::filesystem::directory_exists(target_replica_dir)) {
+                ddebug_f("disk reset(origin={}) target replica dir({}) has existed, delete it now", replica_dirs[i].c_str(),
+                         target_replica_dir.c_str());
+                utils::filesystem::remove_path(target_replica_dir);
+            }
+            ddebug_f("reset partition, rename dir ({}) to ({})", replica_dirs[i].c_str(),
+                     target_replica_dir.c_str());
+            utils::filesystem::rename_path(replica_dirs[i],target_replica_dir);
+        }
+    };
+
+    if(rep!= nullptr){
+        ddebug_f("start close replica");
+        rep->disk_migrator()->set_status(disk_migration_status::MOVED);
+        auto task = begin_close_replica(rep,true);
+        task->wait();
+        _fs_manager.remove_replica(request.config.pid);
+        rename_func(replica_dirs,pid_str);
+    }else {
+        rename_func(replica_dirs,pid_str);
+    }
+
+    response.err = ERR_OK;
+    response.hint_message =  fmt::format("Path {}",replica_dirs.back());
+}
+
 // ThreadPool: THREAD_POOL_DEFAULT
 void replica_stub::on_query_disk_info(query_disk_info_rpc rpc)
 {
@@ -2386,7 +2470,7 @@ void replica_stub::clear_on_failure(replica *rep)
     _fs_manager.remove_replica(pid);
 }
 
-task_ptr replica_stub::begin_close_replica(replica_ptr r)
+task_ptr replica_stub::begin_close_replica(replica_ptr r, bool disable_delay)
 {
     CHECK(r->status() == partition_status::PS_ERROR ||
               r->status() == partition_status::PS_INACTIVE ||

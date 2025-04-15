@@ -70,6 +70,7 @@ private:
     friend class replica;
     friend class replica_stub;
     friend class replica_disk_migrate_test;
+    friend class replica_reset_test;
 };
 
 } // namespace replication

@@ -240,6 +240,9 @@ private:
     // ddd diagnose
     void ddd_diagnose(ddd_diagnose_rpc rpc);
 
+    //ddd_reset
+    void ddd_reset(ddd_reset_rpc rpc);
+
     // cluster info
     void on_query_cluster_info(configuration_cluster_info_rpc rpc);
 
