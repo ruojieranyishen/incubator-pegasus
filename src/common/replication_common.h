@@ -34,6 +34,7 @@
 #include "metadata_types.h"
 #include "rpc/rpc_holder.h"
 #include "rpc/rpc_host_port.h"
+#include "replica_admin_types.h"
 #include "task/task.h"
 
 namespace dsn {

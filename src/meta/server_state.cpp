@@ -2022,17 +2022,17 @@ void server_state::on_reset_partition(ddd_reset_rpc rpc){
         response.err = app == nullptr? ERR_APP_NOT_EXIST : ERR_APP_DROPPED;
         auto hint_msg = fmt::format(
             "app {} is ", response.err == ERR_APP_NOT_EXIST ? "not existed" : "not available");
-        derror_f("{}", hint_msg);
+        CHECK(false, "{}", hint_msg);
         return ;
     }
 
-    partition_configuration &pc = app->partitions[pid.get_partition_index()];
+    partition_configuration &pc = app->pcs[pid.get_partition_index()];
     std::ostringstream  mem_oss;
     mem_oss << pc;
-    ddebug("reset partition %s",mem_oss.str().c_str());
+    LOG_DEBUG("reset partition {}",mem_oss.str().c_str());
 
     if (!pc.primary.is_invalid()){
-        ddebug("cannot reset partition, because cur partition primary not invalid");
+        LOG_DEBUG("cannot reset partition, because cur partition primary not invalid");
         response.err = dsn::ERR_NOT_IMPLEMENTED;
         return ;
     }
@@ -2042,7 +2042,7 @@ void server_state::on_reset_partition(ddd_reset_rpc rpc){
 }
 
 void server_state::reset_partition(std::shared_ptr<app_state> &app, int pidx){
-    partition_configuration &pc = app->partitions[pidx];
+    partition_configuration &pc = app->pcs[pidx];
     std::string partition_path = get_partition_path(pc.pid);
 
     auto do_reset_partition = [this, app,expected_pidx = pidx ,partition_path](error_code ec, const blob &value) {
@@ -2055,8 +2055,7 @@ void server_state::reset_partition(std::shared_ptr<app_state> &app, int pidx){
                 }
                 std::ostringstream  oss;
                 oss << partition_config;
-                ddebug("get will reset partition, partition_config=%s",oss.str().c_str());
-
+                LOG_DEBUG("get will reset partition, partition_config={}",oss.str().c_str());
                 partition_configuration new_partition_config = partition_config;
                 new_partition_config.primary.set_invalid();
                 new_partition_config.secondaries.clear();
@@ -2076,9 +2075,9 @@ void server_state::reset_partition(std::shared_ptr<app_state> &app, int pidx){
                             std::ostringstream reset_oss;
                             reset_oss << new_partition_config;
                             app->partitions[expected_pidx] = new_partition_config;
-                            ddebug("reset partition success, gpid(%s), partition_config=%s ", new_partition_config.pid.to_string(),reset_oss.str().c_str());
+                            LOG_DEBUG("reset partition success, gpid({}), partition_config={} ", new_partition_config.pid.to_string(),reset_oss.str().c_str());
                         } else {
-                            derror("cannot reset partition gpid(%s) partition_configuration in remote storage failed, err reason(%s)",
+                            LOG_ERROR("cannot reset partition gpid({}) partition_configuration in remote storage failed, err reason({})",
                                    new_partition_config.pid.to_string(),
                                    err.to_string());
                         } },
