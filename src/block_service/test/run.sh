@@ -24,9 +24,15 @@ if [ -z "${REPORT_DIR}" ]; then
 fi
 
 # By default, unit tests use local_service.
-# To connect to HDFS/JuiceFS or other storage systems in unit tests, configure the corresponding paths.
-package_dir="example: pegasus-server-2.4.8-without-slog-cb99c3e-glibc2.17-release absolute path"
-echo $package_dir
+# To connect to HDFS/JuiceFS or other storage systems in unit tests, set PACKAGE_DIR:
+#   export PACKAGE_DIR=/path/to/pegasus-server-x.x.x-glibc2.17-release
+if [ -z "${PACKAGE_DIR}" ]; then
+    echo "ERROR: PACKAGE_DIR is not set. Please set it to the pegasus server package directory."
+    echo "Example: export PACKAGE_DIR=/path/to/pegasus-server-x.x.x-glibc2.17-release"
+    exit 1
+fi
+package_dir="${PACKAGE_DIR}"
+echo "Using package_dir: $package_dir"
 
 # Set the ld library path
 ld_library_path=$package_dir/DSN_ROOT/lib:$package_dir/bin:$LD_LIBRARY_PATH

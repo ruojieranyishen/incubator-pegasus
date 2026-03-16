@@ -169,8 +169,10 @@ if [ -n "$HADOOP_HOME" ]; then
     # Pack the jars.
     mkdir -p ${pack}/hadoop
 
-    wget -N https://github.com/juicedata/juicefs/releases/download/v1.3.1/juicefs-hadoop-1.3.1.jar
-    copy_file ./juicefs-hadoop-1.3.1.jar ${pack}/hadoop
+    # output/hadoop/juicefs-hadoop-1.3.1.jar (match thirdparty)
+    juicefs_jar="${THIRDPARTY_ROOT}/output/hadoop/juicefs-hadoop-1.3.1.jar"
+    [ -f "$juicefs_jar" ] || { echo "ERROR: $juicefs_jar not found"; exit 1; }
+    copy_file "$juicefs_jar" ${pack}/hadoop
     for f in ${HADOOP_HOME}/share/hadoop/common/lib/*.jar; do
         copy_file $f ${pack}/hadoop
     done

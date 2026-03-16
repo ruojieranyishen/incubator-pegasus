@@ -23,13 +23,16 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include "utils/error_code.h"
 #include "utils/singleton.h"
 #include "utils/zlocks.h"
 
-namespace dsn {
-namespace dist {
-namespace block_service {
+namespace dsn::dist::block_service {
+
+// JuiceFS provider URL prefix (e.g., jfs://volume@cluster_name)
+constexpr std::string_view JUICEFS_PROVIDER_PREFIX = "jfs://";
+
 class block_filesystem;
 
 // a singleton for rDSN service_engine to register all blocks, this should be called only once
@@ -51,6 +54,20 @@ public:
     block_service_manager();
     ~block_service_manager();
     block_filesystem *get_or_create_block_filesystem(const std::string &provider);
+
+    static bool is_juicefs_provider(const std::string &provider)
+    {
+        if (!absl::StartsWith(provider, JUICEFS_PROVIDER_PREFIX)) {
+            return false;
+        }
+        std::string remaining = provider.substr(JUICEFS_PROVIDER_PREFIX.size());
+        size_t at_pos = remaining.find('@');
+        if (at_pos == std::string::npos || at_pos == 0) {
+            return false;
+        }
+        std::string host = remaining.substr(at_pos + 1);
+        return !host.empty();
+    }
 
     // download files from remote file system
     // \return  ERR_FILE_OPERATION_FAILED: local file system error
@@ -77,23 +94,6 @@ public:
                              /*out*/ uint64_t &download_file_size);
 
 private:
-    static bool is_juicefs_provider(const std::string &provider)
-    {
-        // provider example: jfs://pegasus@ak-bigdata
-        const std::string prefix = "jfs://";
-        if (!absl::StartsWith(provider, prefix)) {
-            return false;
-        }
-        std::string remaining = provider.substr(prefix.size());
-        size_t at_pos = remaining.find('@');
-        if (at_pos == std::string::npos || at_pos == 0) {
-            return false;
-        }
-        // check has ak-bigdata
-        std::string host = remaining.substr(at_pos + 1);
-        return !host.empty();
-    }
-
     block_service_registry &_registry_holder;
 
     mutable zrwlock_nr _fs_lock;
@@ -102,6 +102,4 @@ private:
     friend class block_service_manager_mock;
 };
 
-} // namespace block_service
-} // namespace dist
-} // namespace dsn
+} // namespace dsn::dist::block_service
