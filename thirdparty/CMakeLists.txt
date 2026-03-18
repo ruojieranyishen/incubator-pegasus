@@ -510,7 +510,7 @@ ExternalProject_Add(rocksdb
         URL_MD5 f03eac50ec958a21a7cb56183afb8fe4
         PATCH_COMMAND patch -p1 < ${TP_DIR}/fix_rocksdb-cmake-PORTABLE-option.patch
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/encfs
-        COMMAND git clone -b main --depth=1 ${GITHUB_MIRROR}/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
+        COMMAND git clone -b main --depth=1 https://github.com/pegasus-kv/encfs.git ${TP_DIR}/build/Source/rocksdb/plugin/encfs
         COMMAND rm -rf ${TP_DIR}/build/Source/rocksdb/plugin/hdfs
         COMMAND git clone -b master --depth=1 https://github.com/riversand963/rocksdb-hdfs-env.git ${TP_DIR}/build/Source/rocksdb/plugin/hdfs
         COMMAND cd ${TP_DIR}/build/Source/rocksdb/plugin/hdfs && patch -p1 < ${TP_DIR}/fix_rocksdb-plugin-hdfs.patch
