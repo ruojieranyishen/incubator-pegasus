@@ -601,7 +601,7 @@ DSN_DEFINE_uint64(pegasus.server,
                   "values smaller than this are stored in SST files");
 DSN_DEFINE_uint64(pegasus.server,
                   rocksdb_blob_file_size,
-                  512 * 1024 * 1024,
+                  512ULL * 1024 * 1024,
                   "maximum size (in bytes) of a blob file");
 DSN_DEFINE_double(pegasus.server,
                   rocksdb_blob_garbage_collection_age_cutoff,
@@ -810,7 +810,7 @@ pegasus_server_impl::pegasus_server_impl(dsn::replication::replica *r)
     } else {
         _data_cf_opts.prepopulate_blob_cache = rocksdb::PrepopulateBlobCache::kDisable;
     }
-    rocksdb::CompressionType blob_compression_type;
+    rocksdb::CompressionType blob_compression_type = rocksdb::kNoCompression;
     CHECK(compression_str_to_type(FLAGS_rocksdb_blob_compression_type, blob_compression_type),
           "parse rocksdb_blob_compression_type failed.");
     _data_cf_opts.blob_compression_type = blob_compression_type;

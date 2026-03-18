@@ -594,30 +594,36 @@ const std::unordered_map<std::string, cf_opts_getter> cf_opts_getters = {
      }},
     {dsn::replica_envs::ROCKSDB_BOTTOMMOST_TEMPERATURE,
      [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
-         if (option.bottommost_temperature == rocksdb::Temperature::kUnknown) {
-             str = "kUnknown";
-         } else if (option.bottommost_temperature == rocksdb::Temperature::kHot) {
+         switch (option.bottommost_temperature) {
+         case rocksdb::Temperature::kHot:
              str = "kHot";
-         } else if (option.bottommost_temperature == rocksdb::Temperature::kWarm) {
+             break;
+         case rocksdb::Temperature::kWarm:
              str = "kWarm";
-         } else if (option.bottommost_temperature == rocksdb::Temperature::kCold) {
+             break;
+         case rocksdb::Temperature::kCold:
              str = "kCold";
-         } else {
+             break;
+         default:
              str = "kUnknown";
+             break;
          }
      }},
     {dsn::replica_envs::ROCKSDB_LAST_LEVEL_TEMPERATURE,
      [](const rocksdb::ColumnFamilyOptions &option, /*out*/ std::string &str) {
-         if (option.last_level_temperature == rocksdb::Temperature::kUnknown) {
-             str = "kUnknown";
-         } else if (option.last_level_temperature == rocksdb::Temperature::kHot) {
+         switch (option.last_level_temperature) {
+         case rocksdb::Temperature::kHot:
              str = "kHot";
-         } else if (option.last_level_temperature == rocksdb::Temperature::kWarm) {
+             break;
+         case rocksdb::Temperature::kWarm:
              str = "kWarm";
-         } else if (option.last_level_temperature == rocksdb::Temperature::kCold) {
+             break;
+         case rocksdb::Temperature::kCold:
              str = "kCold";
-         } else {
+             break;
+         default:
              str = "kUnknown";
+             break;
          }
      }},
 };
@@ -3217,7 +3223,7 @@ void pegasus_server_impl::query_app_envs(/*out*/ std::map<std::string, std::stri
         }
     }
     for (const auto &option : dsn::replica_envs::ROCKSDB_DYNAMIC_OPTIONS) {
-        if (option.compare(dsn::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE) == 0) {
+        if (option == dsn::replica_envs::ROCKSDB_WRITE_BUFFER_SIZE) {
             continue;
         }
         auto getter = cf_opts_getters.find(option);
