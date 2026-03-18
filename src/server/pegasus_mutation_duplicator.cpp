@@ -131,7 +131,7 @@ namespace pegasus::server {
         return pegasus_hash_key_hash(thrift_request.hash_key);
     }
 
-    LOG_FATAL("unexpected task code: {}", rpc_code);
+    LOG_FATAL("unexpected task code: {}", tc);
     __builtin_unreachable();
 }
 
