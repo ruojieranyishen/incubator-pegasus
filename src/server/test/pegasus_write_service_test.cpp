@@ -24,6 +24,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/pegasus_key_schema.h"

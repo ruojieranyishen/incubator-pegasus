@@ -270,6 +270,12 @@ void pegasus_mutation_duplicator::log_non_idempotent_rpc_retry_if_need(duplicate
 
         METRIC_VAR_INCREMENT(dup_retry_non_idempotent_duplicate_request);
 
+        // Randomly log 1% of the non-idempotent duplicate RPC retries to avoid
+        // excessive log volume under high QPS.
+        if (dsn::rand::next_double01() > 0.01) {
+            continue;
+        }
+
         dsn::message_ex *write = dsn::from_blob_to_received_msg(entry.task_code, entry.raw_message);
 
         if (tc == dsn::apps::RPC_RRDB_RRDB_INCR) {
